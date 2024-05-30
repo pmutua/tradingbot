@@ -39,7 +39,7 @@ def log_db(message):
     print("low: " + str(low))
     print("time: " + str(time))
 
-    row = (id, symbol, interval, close, high, low, time)
+    row = (str(id), symbol, interval, close, high, low, time)
     con = psycopg2.connect(
         dbname=os.getenv('POSTGRES_DB'),
         user=os.getenv('POSTGRES_USER'),
