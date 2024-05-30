@@ -55,7 +55,7 @@ def log_db(message):
     con.close()
 
 
-def get_recent_market_data(period):
+def get_recent_market_data():
     con = psycopg2.connect(
         dbname=os.getenv('POSTGRES_DB'),
         user=os.getenv('POSTGRES_USER'),
@@ -64,7 +64,20 @@ def get_recent_market_data(period):
         port=os.getenv('POSTGRES_PORT')
     )
     cur = con.cursor()
-    cur.execute(f"SELECT * FROM MarketData ORDER BY timestamp DESC LIMIT {period}")
+    cur.execute("SELECT * FROM MarketData ORDER BY timestamp DESC")
     rows = cur.fetchall()
     con.close()
     return rows
+# def get_recent_market_data(period):
+#     con = psycopg2.connect(
+#         dbname=os.getenv('POSTGRES_DB'),
+#         user=os.getenv('POSTGRES_USER'),
+#         password=os.getenv('POSTGRES_PASSWORD'),
+#         host=os.getenv('POSTGRES_HOST'),
+#         port=os.getenv('POSTGRES_PORT')
+#     )
+#     cur = con.cursor()
+#     cur.execute(f"SELECT * FROM MarketData ORDER BY timestamp DESC LIMIT {period}")
+#     rows = cur.fetchall()
+#     con.close()
+#     return rows

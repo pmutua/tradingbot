@@ -98,42 +98,16 @@ def on_message(ws, message):
         # End Database
         #===========================================================
 
-        event_time = data['E']
         kline = data['k'] #candlestick
-        
         is_kline_closed = kline['x']
         close_price = float(kline['c'])
-        open_price = float(kline['o'])
-        high_price = float(kline['h'])
-        low_price = float(kline['l'])
-        volume = float(kline['v'])
 
         # Set the current price to the close price of the current kline
         current_price = close_price
 
         if is_kline_closed:
-            # Append new data to market_data
-            # Append new data to market_data
-            new_row = {
-                'event_time': event_time,
-                'open': open_price,
-                'high': high_price,
-                'low': low_price,
-                'close': close_price,
-                'volume': volume
-            }
             # Fetch market data from the database
-            market_data = db.get_recent_market_data(RSI_PERIOD)
-
-            if len(market_data) == RSI_PERIOD:
-                # Trigger notification when 14 rows are reached
-                # Get the current date and time
-                log_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                message = f"Notification: Sufficient data available for analysis (RSI). Ready to make trading decisions - {log_time}"
-                send_message(message)
-                #TODO: Clear local data
-                # Now you have enough data to start making trading decisions based on RSI
-                # Implement your trading logic here
+            market_data = db.get_recent_market_data()
 
             if len(market_data) > RSI_PERIOD:
                 # Convert market_data to DataFrame
@@ -143,7 +117,8 @@ def on_message(ws, message):
                 rsi = talib.RSI(df['close'].values, RSI_PERIOD)[-1]
 
                 if rsi > RSI_OVERBOUGHT:
-                    msg = f"Sell signal triggered! RSI: {rsi:.2f}"
+                    log_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    msg = f"Sell signal triggered! RSI: {rsi:.2f} - LOG: - {log_time}"
                     send_message(msg)
                     logging.info(msg)
                     if trade_amount * current_price <= trading_limit:
@@ -152,7 +127,8 @@ def on_message(ws, message):
                         msg = f"Trade amount exceeds trading limit. Current price: {current_price}, Trading limit: {trading_limit}"
                         logging.info(msg)
                 elif rsi < RSI_OVERSOLD:
-                    msg = f"Buy signal triggered! RSI: {rsi:.2f}"
+                    log_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    msg = f"Buy signal triggered! RSI: {rsi:.2f} - LOG: {log_time}"
                     send_message(msg)
                     logging.info(msg)
                     if trade_amount * current_price <= trading_limit:
