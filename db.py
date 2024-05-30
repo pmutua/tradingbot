@@ -14,7 +14,7 @@ def init_db():
     cur = con.cursor()
 
     cur.execute('''CREATE TABLE IF NOT EXISTS MarketData
-                (id UUID PRIMARY KEY, symbol TEXT, interval TEXT, close REAL, high REAL, low REAL, timestamp INTEGER)''')
+                (id UUID PRIMARY KEY, symbol TEXT, interval TEXT, close REAL, high REAL, low REAL, timestamp BIGINT)''')
     con.commit()
     con.close()
 
@@ -53,3 +53,18 @@ def log_db(message):
     
     con.commit()
     con.close()
+
+
+def get_recent_market_data(period):
+    con = psycopg2.connect(
+        dbname=os.getenv('POSTGRES_DB'),
+        user=os.getenv('POSTGRES_USER'),
+        password=os.getenv('POSTGRES_PASSWORD'),
+        host=os.getenv('POSTGRES_HOST'),
+        port=os.getenv('POSTGRES_PORT')
+    )
+    cur = con.cursor()
+    cur.execute(f"SELECT * FROM MarketData ORDER BY timestamp DESC LIMIT {period}")
+    rows = cur.fetchall()
+    con.close()
+    return rows

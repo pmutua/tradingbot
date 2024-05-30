@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import threading
 import time
@@ -121,12 +122,14 @@ def on_message(ws, message):
                 'close': close_price,
                 'volume': volume
             }
-            market_data.append(new_row)
-            print("==========================Append Data")
+            # Fetch market data from the database
+            market_data = db.get_recent_market_data(RSI_PERIOD)
 
             if len(market_data) == RSI_PERIOD:
                 # Trigger notification when 14 rows are reached
-                message = "Notification: Sufficient data available for analysis. Ready to make trading decisions."
+                # Get the current date and time
+                log_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                message = f"Notification: Sufficient data available for analysis (RSI). Ready to make trading decisions - {log_time}"
                 send_message(message)
                 #TODO: Clear local data
                 # Now you have enough data to start making trading decisions based on RSI
