@@ -5,15 +5,6 @@ FROM python:3.9-slim
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# Set PostgreSQL environment variables
-ENV POSTGRES_DB=mydatabase
-ENV POSTGRES_USER=myuser
-ENV POSTGRES_PASSWORD=mypassword
-ENV POSTGRES_HOST=postgres
-ENV POSTGRES_PORT=5432
-ENV PGADMIN_DEFAULT_EMAIL=admin@example.com
-ENV PGADMIN_DEFAULT_PASSWORD=admin
-
 # Set the working directory in the container
 WORKDIR /app
 
