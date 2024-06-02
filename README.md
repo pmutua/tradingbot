@@ -262,3 +262,45 @@ docker cp trading_bot-telegram-bot-1:/app/streaming-markets.db .
 
 
 This command will copy the streaming-markets.db file from the container's /app directory to the current directory on your host machine.
+
+
+
+
+
+docker exec my_container python -m unittest tests.py
+
+OR 
+
+docker exec <container_name_or_id> python -m unittest tests.py
+
+
+
+https://stackoverflow.com/questions/57006437/calculate-rsi-indicator-from-pandas-dataframe
+
+
+https://github.com/peerchemist/finta/blob/master/finta/finta.py
+
+
+
+
+https://itnext.io/using-the-rsi-indicator-to-generate-trading-signals-in-python-with-ta-lib-3328d4566c6e#:~:text=All%20you%20have%20to%20do,the%20default%2014%2Dday%20window.
+
+
+
+
+https://github.com/TA-Lib/ta-lib-python/issues/479
+
+
+
+https://wire.insiderfinance.io/calculate-rsi-with-python-and-yahoo-finance-c8fb78b1c199
+
+
+https://medium.com/@deepml1818/mastering-financial-analysis-with-python-and-ta-lib-an-intermediate-guide-40735bb61865
+
+
+https://hexdocs.pm/talib/TAlib.Indicators.RSI.html#rsi/2
+
+
+
+
+https://pypi.org/project/TA-Lib/

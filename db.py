@@ -64,10 +64,29 @@ def get_recent_market_data():
         port=os.getenv('POSTGRES_PORT')
     )
     cur = con.cursor()
-    cur.execute("SELECT * FROM MarketData ORDER BY timestamp DESC")
+    cur.execute("SELECT * FROM MarketData ORDER BY timestamp ASC")
     rows = cur.fetchall()
     con.close()
     return rows
+
+def get_recent_market_data_length():
+    try:
+        con = psycopg2.connect(
+            dbname=os.getenv('POSTGRES_DB'),
+            user=os.getenv('POSTGRES_USER'),
+            password=os.getenv('POSTGRES_PASSWORD'),
+            host=os.getenv('POSTGRES_HOST'),
+            port=os.getenv('POSTGRES_PORT')
+        )
+        cur = con.cursor()
+        cur.execute("SELECT COUNT(*) FROM MarketData")  # Count the number of rows
+        row_count = cur.fetchone()[0]  # Fetch the count
+        con.close()
+        return row_count
+    except psycopg2.Error as e:
+        print(f"Error fetching data: {e}")
+        return 0  # Return 0 in case of an error
+
 # def get_recent_market_data(period):
 #     con = psycopg2.connect(
 #         dbname=os.getenv('POSTGRES_DB'),

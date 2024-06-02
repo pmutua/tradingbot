@@ -14,7 +14,8 @@ import telegram
 from telegram.ext import Application, CommandHandler, CallbackContext
 from telegram import Update
 import db
-
+import numpy as np
+from binance.lib.enums import *
 
 # Initialize the Binance client
 binance_api_key = 'YOUR_BINANCE_API_KEY'
@@ -29,53 +30,58 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
                     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
-
+SOCKET = "wss://stream.binance.com:9443/ws/btcusdt@kline_1m"
 # Global variables to store trading limits and amount
 trading_limit = 1000  # Default trading limit
 trade_amount = 0.001  # Default trade amount
 current_price = None  # Global variable to store the current price
-market_data = []
 RSI_PERIOD = 14
 RSI_OVERBOUGHT = 70
 RSI_OVERSOLD = 30
+TRADE_SYMBOL = 'BTCUSDT'
+ORDER_TYPE_MARKET='LIMIT'
+TIME_IN_FORCE = 'GTC'
+TRADE_QUANTITY = 0.05
 trade_amount = 0.01  # Example trade amount
 trading_limit = 1000  # Example trading limit
-TRADING_PAIR = 'btcusdt' #BTCUSDT
-# Function to fetch real-time price
-def fetch_real_time_price(symbol):
-    try:
-        ticker = client.ticker(symbol=symbol)
-        return float(ticker['price'])
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return None
-
+TRADING_PAIR = 'BTCUSDT' #BTCUSDT
+closes=[]
+in_position = False
 
 # Function to place an order
-def place_order(symbol, side, quantity, order_type='LIMIT', timeInForce='GTC', price=None):
+# https://github.com/binance/binance-connector-python/blob/master/examples/spot/trade/new_order.py
+def place_order(side, quantity, symbol,order_type=ORDER_TYPE_MARKET):
     try:
-        params = {
-            'symbol': symbol,
-            'side': side,
-            'type': order_type,
-            'timeInForce': timeInForce,
-            'quantity': quantity
-        }
-        if price is not None:
-            params['price'] = price
-        # Construct the message with order details
-        message = f"Order placed:\n\nSymbol: {symbol}\nSide: {side}\nQuantity: {quantity}\nOrder Type: {order_type}\nTime in Force: {timeInForce}\nPrice: {price if price else 'Market'}"
-        print('ORDER==============')
-        send_message(message)
-        # When order placed record market data market data
-        # update_database([new_row])
-        # order = client.new_order(**params)
-        # print(f"Order placed: {order}")
-        # return order
-    except Exception as e:
-        print(f"An error occurred while placing the order: {e}")
-        return None
+        print("sending order...")
+        message = f"Order placed:\n\nSymbol: {symbol}\nSide: {side}\nQuantity: {quantity}\nOrder Type: {order_type}\nTime\nPrice:"
+        send_message(message)   
+        if trade_amount * current_price <= trading_limit:
+            pass
+            # params = {
+            # "symbol": symbol,
+            # "side": side,
+            # "type": "LIMIT",
+            # "timeInForce": "GTC",
+            # "quantity": quantity,
+            # "price": current_price}
 
+            # order = client.create_order(**params)
+            # message = f"Order placed:\n\nSymbol: {symbol}\nSide: {side}\nQuantity: {quantity}\nOrder Type: {order_type}\nTime\nPrice:"
+            # send_message(message)     
+        else:
+            msg = f"Trade amount exceeds trading limit. Current price: {current_price}, Trading limit: {trading_limit}"
+            send_message(msg)
+
+    except Exception as e:
+        print("an exception occured - {}".format(e))
+        return False
+
+    return True
+
+    
+
+# Initialize the RSI stre
+# Global variables
 # Function to handle incoming WebSocket messages
 def on_message(ws, message):
     """Purpose of the Function
@@ -85,58 +91,76 @@ def on_message(ws, message):
     *RSI Calculation: To calculate the Relative Strength Index (RSI) based on the updated market data.
     *Trade Decision: To make buy or sell decisions based on the RSI values and execute trades accordingly.
     """
-    global current_price, market_data
+    global closes, in_position, current_price
 
     try:
         #==========================================================
         # Start Update streamed data to Database
         #===========================================================
-        data = json.loads(message)  # Parse the message as JSON
+        print('received message')
+        json_message = json.loads(message)
         print()
-        db.log_db(message)
+
+        candle = json_message['k']
+
+        is_candle_closed = candle['x']
+        close = candle['c']
+        current_price = float(close)
+        # db.log_db(message)
         #==========================================================
         # End Database
         #===========================================================
 
-        kline = data['k'] #candlestick
-        is_kline_closed = kline['x']
-        close_price = float(kline['c'])
+        if is_candle_closed:
+            print("candle closed at {}".format(close))
+            closes.append(float(close))
+            print("closes")
+            print(closes)
 
-        # Set the current price to the close price of the current kline
-        current_price = close_price
+            if len(closes) > RSI_PERIOD:
+                np_closes = np.array(closes)
+                rsi = talib.RSI(np_closes, RSI_PERIOD)
+                print("all rsis calculated so far")
+                print(rsi)
+                last_rsi = rsi[-1]
+                print("the current rsi is {}".format(last_rsi))
 
-        if is_kline_closed:
-            # Fetch market data from the database
-            market_data = db.get_recent_market_data()
+                if last_rsi > RSI_OVERBOUGHT:
+                    if in_position:
+                        print("Overbought! Sell! Sell! Sell!")
+                        # put binance sell logic here
+                        order_succeeded = place_order('SELL', TRADE_QUANTITY, TRADE_SYMBOL)
+                        log_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        msg = f"Sell signal triggered! RSI: {rsi:.2f} - LOG: - {log_time}"
+                        # Place sell order or take appropriate action
+                        send_message(msg)
+                        # logging.info(msg)
+                        if order_succeeded:
+                            in_position = False
+                            #TODO: move this code
+                            if trade_amount * current_price <= trading_limit:
+                                place_order(TRADING_PAIR, 'SELL', trade_amount)
+                            else:
+                                msg = f"Trade amount exceeds trading limit. Current price: {current_price}, Trading limit: {trading_limit}"
+                                logging.info(msg)
 
-            if len(market_data) > RSI_PERIOD:
-                # Convert market_data to DataFrame
-                df = pd.DataFrame(market_data)
-                # Keep only the last RSI_PERIOD data points
-                df = df.iloc[-RSI_PERIOD:]
-                rsi = talib.RSI(df['close'].values, RSI_PERIOD)[-1]
 
-                if rsi > RSI_OVERBOUGHT:
-                    log_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    msg = f"Sell signal triggered! RSI: {rsi:.2f} - LOG: - {log_time}"
-                    send_message(msg)
-                    logging.info(msg)
-                    if trade_amount * current_price <= trading_limit:
-                        place_order(TRADING_PAIR, 'SELL', trade_amount)
+
+                if last_rsi < RSI_OVERSOLD:
+                    if in_position:
+                        print("It is oversold, but you already own it, nothing to do.")
                     else:
-                        msg = f"Trade amount exceeds trading limit. Current price: {current_price}, Trading limit: {trading_limit}"
+                        # put binance buy order logic here
+                        order_succeeded = place_order('BUY', TRADE_QUANTITY, TRADE_SYMBOL)
+                        log_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        msg = f"Buy signal triggered! RSI: {rsi:.2f} - LOG: {log_time}"
+                        # Place buy order or take appropriate action
+                        send_message(msg)
                         logging.info(msg)
-                elif rsi < RSI_OVERSOLD:
-                    log_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    msg = f"Buy signal triggered! RSI: {rsi:.2f} - LOG: {log_time}"
-                    send_message(msg)
-                    logging.info(msg)
-                    if trade_amount * current_price <= trading_limit:
-                        place_order(TRADING_PAIR, 'BUY', trade_amount)
-                    else:
-                        msg = f"Trade amount exceeds trading limit. Current price: {current_price}, Trading limit: {trading_limit}"
-                        logging.info(msg)
-                        
+                        if order_succeeded:
+                            in_position = True
+
+
     except json.JSONDecodeError as e:
         print(f"Error decoding JSON: {e}")
     except Exception as e:
@@ -166,7 +190,7 @@ def stream_kline():
     """
     websocket.enableTrace(True)
     # "wss://stream.binance.com:9443/ws/<CURRENCY>@kline_<INTERVAL>"
-    ws = websocket.WebSocketApp("wss://stream.binance.com:9443/ws/btcusdt@kline_1m",
+    ws = websocket.WebSocketApp(SOCKET,
                                 on_open=on_open,
                                 on_message=on_message,  # Run on_message in a separate asyncio event loop
                                 on_error=on_error,
@@ -255,6 +279,6 @@ async def automated_trading():
 
 
 if __name__ == "__main__":
-    db.init_db()
+    # db.init_db()
     stream_kline()
     app.run_polling()
