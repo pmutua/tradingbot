@@ -22,9 +22,9 @@ binance_api_key = 'YOUR_BINANCE_API_KEY'
 binance_api_secret = 'YOUR_BINANCE_API_SECRET'
 client = Client(api_key=binance_api_key, api_secret=binance_api_secret)
 
-# Telegram bot token
-TELEGRAM_TOKEN = '6452060768:AAENP-ek2lcHgERTlVIb6dzrK6kg3oB1xMw'
-CHAT_ID = 699510250
+# Use Your Telegram bot token and telegram chat id 
+TELEGRAM_TOKEN = 'TELEGRAM TOKEN'
+CHAT_ID = 'TELEGRAM CHAT ID'
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
